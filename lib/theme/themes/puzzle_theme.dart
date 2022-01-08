@@ -37,6 +37,14 @@ abstract class PuzzleTheme extends Equatable {
   /// Used for the puzzle tile that was pressed.
   Color get pressedColor;
 
+  /// The correct color of this theme.
+  ///
+  /// Used for the puzzle tile that is in the correct position.
+  Color get correctColor;
+
+  /// The color of the board
+  Color get boardColor;
+
   /// The puzzle layout delegate of this theme.
   ///
   /// Used for building sections of the puzzle UI.

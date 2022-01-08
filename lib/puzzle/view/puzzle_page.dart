@@ -29,6 +29,14 @@ class PuzzlePage extends StatelessWidget {
   }
 }
 
+class _OffsetCubit extends Cubit<Offset> {
+  _OffsetCubit() : super(Offset.zero);
+
+  void updateOffset(Offset offset) {
+    emit(offset);
+  }
+}
+
 /// {@template puzzle_view}
 /// Displays the content for the [PuzzlePage].
 /// {@endtemplate}
@@ -56,8 +64,24 @@ class PuzzleView extends StatelessWidget {
                 shufflePuzzle: shufflePuzzle,
               ),
             ),
-          child: const _Puzzle(
-            key: Key('puzzle_view_puzzle'),
+          child: BlocProvider(
+            create: (context) => _OffsetCubit(),
+            child: Builder(builder: (context) {
+              return MouseRegion(
+                onHover: (event) {
+                  final offset = event.position;
+                  // Normalize offset
+                  final normalizedOffset = Offset(
+                    offset.dx / MediaQuery.of(context).size.width,
+                    offset.dy / MediaQuery.of(context).size.height,
+                  );
+                  context.read<_OffsetCubit>().updateOffset(normalizedOffset);
+                },
+                child: _Puzzle(
+                  key: Key('puzzle_view_puzzle'),
+                ),
+              );
+            }),
           ),
         ),
       ),
@@ -223,22 +247,31 @@ class PuzzleBoard extends StatelessWidget {
     final size = puzzle.getDimension();
     if (size == 0) return const CircularProgressIndicator();
 
-    return BlocListener<PuzzleBloc, PuzzleState>(
-      listener: (context, state) {
-        if (theme.hasTimer && state.puzzleStatus == PuzzleStatus.complete) {
-          context.read<TimerBloc>().add(const TimerStopped());
-        }
-      },
-      child: theme.layoutDelegate.boardBuilder(
-        size,
-        puzzle.tiles
-            .map(
-              (tile) => _PuzzleTile(
-                key: Key('puzzle_tile_${tile.value.toString()}'),
-                tile: tile,
-              ),
-            )
-            .toList(),
+    Offset cursorOffset = context.select((_OffsetCubit cubit) => cubit.state);
+
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()
+        ..setEntry(3, 2, 0.001)
+        ..rotateX(-(cursorOffset.dy - 0.5) / 0.5 * 0.1)
+        ..rotateY((cursorOffset.dx - 0.5) / 0.5 * 0.1),
+      child: BlocListener<PuzzleBloc, PuzzleState>(
+        listener: (context, state) {
+          if (theme.hasTimer && state.puzzleStatus == PuzzleStatus.complete) {
+            context.read<TimerBloc>().add(const TimerStopped());
+          }
+        },
+        child: theme.layoutDelegate.boardBuilder(
+          size,
+          puzzle.tiles
+              .map(
+                (tile) => _PuzzleTile(
+                  key: Key('puzzle_tile_${tile.value.toString()}'),
+                  tile: tile,
+                ),
+              )
+              .toList(),
+        ),
       ),
     );
   }

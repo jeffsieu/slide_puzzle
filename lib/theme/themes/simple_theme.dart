@@ -27,10 +27,16 @@ class SimpleTheme extends PuzzleTheme {
   Color get defaultColor => PuzzleColors.primary5;
 
   @override
-  Color get hoverColor => PuzzleColors.primary3;
+  Color get hoverColor => PuzzleColors.primary6;
 
   @override
   Color get pressedColor => PuzzleColors.primary7;
+
+  @override
+  Color get correctColor => PuzzleColors.secondary1;
+
+  @override
+  Color get boardColor => PuzzleColors.board;
 
   @override
   PuzzleLayoutDelegate get layoutDelegate => const SimplePuzzleLayoutDelegate();
