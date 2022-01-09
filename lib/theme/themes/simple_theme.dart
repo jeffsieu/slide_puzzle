@@ -24,13 +24,13 @@ class SimpleTheme extends PuzzleTheme {
   Color get backgroundColor => PuzzleColors.white;
 
   @override
-  Color get defaultColor => PuzzleColors.primary5;
+  Color get defaultColor => PuzzleColors.primary500;
 
   @override
-  Color get hoverColor => PuzzleColors.primary6;
+  Color get hoverColor => PuzzleColors.primary400;
 
   @override
-  Color get pressedColor => PuzzleColors.primary7;
+  Color get pressedColor => PuzzleColors.primary300;
 
   @override
   Color get correctColor => PuzzleColors.secondary1;

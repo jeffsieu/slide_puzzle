@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:very_good_slide_puzzle/layout/layout.dart';
 import 'package:very_good_slide_puzzle/models/models.dart';
 import 'package:very_good_slide_puzzle/puzzle/puzzle.dart';
+import 'package:very_good_slide_puzzle/settings/bloc/settings_bloc.dart';
 import 'package:very_good_slide_puzzle/theme/theme.dart';
 import 'package:very_good_slide_puzzle/timer/timer.dart';
 
@@ -18,19 +19,26 @@ class PuzzlePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ThemeBloc(
-        themes: const [
-          SimpleTheme(),
-        ],
-      ),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => ThemeBloc(
+            themes: const [
+              SimpleTheme(),
+            ],
+          ),
+        ),
+        BlocProvider(
+          create: (context) => SettingsBloc(),
+        ),
+      ],
       child: const PuzzleView(),
     );
   }
 }
 
 class _OffsetCubit extends Cubit<Offset> {
-  _OffsetCubit() : super(Offset.zero);
+  _OffsetCubit() : super(const Offset(0.5, 0.5));
 
   void updateOffset(Offset offset) {
     emit(offset);
@@ -47,6 +55,7 @@ class PuzzleView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.select((ThemeBloc bloc) => bloc.state.theme);
+    final puzzleSize = context.select((SettingsBloc bloc) => bloc.state.size);
 
     /// Shuffle only if the current theme is Simple.
     final shufflePuzzle = theme is SimpleTheme;
@@ -57,32 +66,41 @@ class PuzzleView extends StatelessWidget {
         create: (context) => TimerBloc(
           ticker: const Ticker(),
         ),
-        child: BlocProvider(
-          create: (context) => PuzzleBloc(4)
-            ..add(
-              PuzzleInitialized(
-                shufflePuzzle: shufflePuzzle,
-              ),
-            ),
-          child: BlocProvider(
-            create: (context) => _OffsetCubit(),
-            child: Builder(builder: (context) {
-              return MouseRegion(
-                onHover: (event) {
-                  final offset = event.position;
-                  // Normalize offset
-                  final normalizedOffset = Offset(
-                    offset.dx / MediaQuery.of(context).size.width,
-                    offset.dy / MediaQuery.of(context).size.height,
+        child: BlocBuilder<SettingsBloc, SettingsState>(
+          builder: (context, state) {
+            return BlocProvider(
+              key: ValueKey(state.size),
+              create: (context) {
+                return PuzzleBloc(state.size)
+                  ..add(
+                    PuzzleInitialized(
+                      shufflePuzzle: shufflePuzzle,
+                    ),
                   );
-                  context.read<_OffsetCubit>().updateOffset(normalizedOffset);
-                },
-                child: _Puzzle(
-                  key: Key('puzzle_view_puzzle'),
-                ),
-              );
-            }),
-          ),
+              },
+              child: BlocProvider(
+                create: (context) => _OffsetCubit(),
+                child: Builder(builder: (context) {
+                  return MouseRegion(
+                    onHover: (event) {
+                      final offset = event.position;
+                      // Normalize offset
+                      final normalizedOffset = Offset(
+                        offset.dx / MediaQuery.of(context).size.width,
+                        offset.dy / MediaQuery.of(context).size.height,
+                      );
+                      context
+                          .read<_OffsetCubit>()
+                          .updateOffset(normalizedOffset);
+                    },
+                    child: _Puzzle(
+                      key: Key('puzzle_view_puzzle'),
+                    ),
+                  );
+                }),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -97,29 +115,44 @@ class _Puzzle extends StatelessWidget {
     final theme = context.select((ThemeBloc bloc) => bloc.state.theme);
     final state = context.select((PuzzleBloc bloc) => bloc.state);
 
+    Offset cursorOffset = context.select((_OffsetCubit cubit) => cubit.state);
+    double normalizedDy = -(cursorOffset.dy - 0.5) / 0.5;
+    double normalizedDx = (cursorOffset.dx - 0.5) / 0.5;
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        return Stack(
-          children: [
-            theme.layoutDelegate.backgroundBuilder(state),
-            SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
-                child: Column(
-                  children: const [
-                    _PuzzleHeader(
-                      key: Key('puzzle_header'),
-                    ),
-                    _PuzzleSections(
-                      key: Key('puzzle_sections'),
-                    ),
-                  ],
+        return Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..setEntry(3, 2, 0.001)
+            ..rotateX(normalizedDy.sign *
+                Curves.easeOut.transform(normalizedDy.abs()) *
+                0.01)
+            ..rotateY(normalizedDx.sign *
+                Curves.easeOut.transform(normalizedDx.abs()) *
+                0.01),
+          child: Stack(
+            children: [
+              theme.layoutDelegate.backgroundBuilder(state),
+              SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight,
+                  ),
+                  child: Column(
+                    children: const [
+                      _PuzzleHeader(
+                        key: Key('puzzle_header'),
+                      ),
+                      _PuzzleSections(
+                        key: Key('puzzle_sections'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -242,19 +275,26 @@ class PuzzleBoard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.select((ThemeBloc bloc) => bloc.state.theme);
-    final puzzle = context.select((PuzzleBloc bloc) => bloc.state.puzzle);
+    final puzzleState = context.select((PuzzleBloc bloc) => bloc.state);
+    final puzzle = puzzleState.puzzle;
 
     final size = puzzle.getDimension();
     if (size == 0) return const CircularProgressIndicator();
 
     Offset cursorOffset = context.select((_OffsetCubit cubit) => cubit.state);
+    double normalizedDy = -(cursorOffset.dy - 0.5) / 0.5;
+    double normalizedDx = (cursorOffset.dx - 0.5) / 0.5;
 
     return Transform(
       alignment: Alignment.center,
-      transform: Matrix4.identity()
-        ..setEntry(3, 2, 0.001)
-        ..rotateX(-(cursorOffset.dy - 0.5) / 0.5 * 0.1)
-        ..rotateY((cursorOffset.dx - 0.5) / 0.5 * 0.1),
+      transform: Matrix4.identity(),
+      // ..setEntry(3, 2, 0.001)
+      // ..rotateX(normalizedDy.sign *
+      //     Curves.easeOut.transform(normalizedDy.abs()) *
+      //     0.1)
+      // ..rotateY(normalizedDx.sign *
+      //     Curves.easeOut.transform(normalizedDx.abs()) *
+      //     0.1),
       child: BlocListener<PuzzleBloc, PuzzleState>(
         listener: (context, state) {
           if (theme.hasTimer && state.puzzleStatus == PuzzleStatus.complete) {
@@ -271,6 +311,7 @@ class PuzzleBoard extends StatelessWidget {
                 ),
               )
               .toList(),
+          puzzleState,
         ),
       ),
     );

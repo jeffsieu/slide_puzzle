@@ -480,9 +480,9 @@ void main() {
 
       group('matches golden file', () {
         setUp(() {
-          when(() => theme.defaultColor).thenReturn(PuzzleColors.primary5);
-          when(() => theme.hoverColor).thenReturn(PuzzleColors.primary3);
-          when(() => theme.pressedColor).thenReturn(PuzzleColors.primary7);
+          when(() => theme.defaultColor).thenReturn(PuzzleColors.primary500);
+          when(() => theme.hoverColor).thenReturn(PuzzleColors.primary700);
+          when(() => theme.pressedColor).thenReturn(PuzzleColors.primary300);
         });
 
         testWidgets('given default state', (tester) async {

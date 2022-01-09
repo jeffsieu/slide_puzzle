@@ -1,3 +1,6 @@
+import 'dart:math';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
@@ -6,6 +9,7 @@ import 'package:very_good_slide_puzzle/l10n/l10n.dart';
 import 'package:very_good_slide_puzzle/layout/layout.dart';
 import 'package:very_good_slide_puzzle/models/models.dart';
 import 'package:very_good_slide_puzzle/puzzle/puzzle.dart';
+import 'package:very_good_slide_puzzle/settings/bloc/settings_bloc.dart';
 import 'package:very_good_slide_puzzle/theme/theme.dart';
 import 'package:very_good_slide_puzzle/typography/typography.dart';
 
@@ -41,7 +45,18 @@ class SimplePuzzleLayoutDelegate extends PuzzleLayoutDelegate {
         ResponsiveLayoutBuilder(
           small: (_, child) => const SimplePuzzleShuffleButton(),
           medium: (_, child) => const SimplePuzzleShuffleButton(),
-          large: (_, __) => const SizedBox(),
+          large: (_, __) => Builder(builder: (context) {
+            return TextButton(
+              child: const Text('Settings'),
+              onPressed: () {
+                final isSettingsVisible =
+                    context.read<SettingsBloc>().state.isSettingsVisible;
+                context.read<SettingsBloc>().add(isSettingsVisible
+                    ? HideSettingsTapped()
+                    : ShowSettingsTapped());
+              },
+            );
+          }),
         ),
         const ResponsiveGap(
           small: 32,
@@ -89,60 +104,171 @@ class SimplePuzzleLayoutDelegate extends PuzzleLayoutDelegate {
   }
 
   @override
-  Widget boardBuilder(int size, List<Widget> tiles) {
-    return Builder(builder: (context) {
-      final theme = context.select((ThemeBloc bloc) => bloc.state.theme);
-      return Column(
-        children: [
-          const ResponsiveGap(
-            small: 32,
-            medium: 48,
-            large: 96,
+  Widget boardBuilder(int size, List<Widget> tiles, PuzzleState state) {
+    final board = Builder(
+      builder: (context) {
+        final theme = context.select((ThemeBloc bloc) => bloc.state.theme);
+        final isSettingsVisible =
+            context.select((SettingsBloc bloc) => bloc.state.isSettingsVisible);
+        final puzzleSize =
+            context.select((SettingsBloc bloc) => bloc.state.size);
+
+        final settingsPage = Column(
+          children: [
+            Text(
+              'Settings',
+              style: PuzzleTextStyle.headline3
+                  .copyWith(color: PuzzleColors.primary800),
+            ),
+            const Gap(24),
+            Text('Size',
+                style: PuzzleTextStyle.headline4
+                    .copyWith(color: PuzzleColors.primary400)),
+            Slider.adaptive(
+              activeColor: PuzzleColors.primary500,
+              inactiveColor: PuzzleColors.primary200,
+              value: puzzleSize.toDouble(),
+              label: '$puzzleSize x $puzzleSize',
+              divisions: SettingsBloc.sizeMax - SettingsBloc.sizeMin,
+              onChanged: (value) {
+                context.read<SettingsBloc>().add(SizeChanged(value.toInt()));
+              },
+              min: SettingsBloc.sizeMin.toDouble(),
+              max: SettingsBloc.sizeMax.toDouble(),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  SettingsBloc.sizeMin.toString(),
+                  style: PuzzleTextStyle.body
+                      .copyWith(color: PuzzleColors.primary500),
+                ),
+                Text(
+                  SettingsBloc.sizeMax.toString(),
+                  style: PuzzleTextStyle.body
+                      .copyWith(color: PuzzleColors.primary500),
+                ),
+              ],
+            )
+          ],
+        );
+
+        final settings = Material(
+          key: Key('Settings'),
+          elevation: 8,
+          color: theme.boardColor,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: ResponsiveLayoutBuilder(
+              small: (_, __) => SizedBox.square(
+                dimension: _BoardSize.small,
+                child: settingsPage,
+              ),
+              medium: (_, __) => SizedBox.square(
+                dimension: _BoardSize.medium,
+                child: settingsPage,
+              ),
+              large: (_, __) => SizedBox.square(
+                dimension: _BoardSize.large,
+                child: settingsPage,
+              ),
+            ),
           ),
-          Material(
-            elevation: 8,
-            color: theme.boardColor,
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: ResponsiveLayoutBuilder(
-                small: (_, __) => SizedBox.square(
-                  dimension: _BoardSize.small,
-                  child: SimplePuzzleBoard(
-                    key: const Key('simple_puzzle_board_small'),
-                    boardSize: _BoardSize.small,
-                    length: size,
-                    tiles: tiles,
-                    spacing: 5,
-                  ),
+        );
+        final board = Material(
+          key: Key('Board'),
+          elevation: 8,
+          color: theme.boardColor,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: ResponsiveLayoutBuilder(
+              small: (_, __) => SizedBox.square(
+                dimension: _BoardSize.small,
+                child: SimplePuzzleBoard(
+                  key: const Key('simple_puzzle_board_small'),
+                  boardSize: _BoardSize.small,
+                  length: size,
+                  tiles: tiles,
+                  state: state,
+                  spacing: 5,
                 ),
-                medium: (_, __) => SizedBox.square(
-                  dimension: _BoardSize.medium,
-                  child: SimplePuzzleBoard(
-                    key: const Key('simple_puzzle_board_medium'),
-                    boardSize: _BoardSize.medium,
-                    length: size,
-                    tiles: tiles,
-                  ),
+              ),
+              medium: (_, __) => SizedBox.square(
+                dimension: _BoardSize.medium,
+                child: SimplePuzzleBoard(
+                  key: const Key('simple_puzzle_board_medium'),
+                  boardSize: _BoardSize.medium,
+                  length: size,
+                  state: state,
+                  tiles: tiles,
                 ),
-                large: (_, __) => SizedBox.square(
-                  dimension: _BoardSize.large,
-                  child: SimplePuzzleBoard(
-                    key: const Key('simple_puzzle_board_large'),
-                    boardSize: _BoardSize.large,
-                    length: size,
-                    tiles: tiles,
-                  ),
+              ),
+              large: (_, __) => SizedBox.square(
+                dimension: _BoardSize.large,
+                child: SimplePuzzleBoard(
+                  key: const Key('simple_puzzle_board_large'),
+                  boardSize: _BoardSize.large,
+                  length: size,
+                  state: state,
+                  tiles: tiles,
                 ),
               ),
             ),
           ),
-          const ResponsiveGap(
-            large: 96,
-          ),
-        ],
-      );
-    });
+        );
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 500),
+          transitionBuilder: (child, animation) {
+            final frontChild = isSettingsVisible ? settings : board;
+            final isFrontChild = frontChild.key == child.key;
+            // return FlipTransition(
+            //   animation: Tween(
+            //           begin: isFrontChild ? 0.0 : 1.0,
+            //           end: isFrontChild ? 1.0 : 0.0)
+            //       .animate(animation),
+            //   child: child,
+            // );
+            // final rotate = Tween(begin: pi, end: 0.0).animate(animation);
+            return AnimatedBuilder(
+              animation: animation,
+              child: child,
+              builder: (context, child) {
+                final frontChildAngle = lerpDouble(pi / 2, 0,
+                    const Interval(0.5, 1).transform(animation.value))!;
+                final backChildAngle = lerpDouble(-pi / 2, 0,
+                    const Interval(0.5, 1).transform(animation.value))!;
+                final angle = isFrontChild ? frontChildAngle : backChildAngle;
+                return Transform(
+                  transform: Matrix4.rotationY(angle),
+                  alignment: Alignment.center,
+                  child: child,
+                );
+              },
+            );
+          },
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          child: isSettingsVisible ? settings : board,
+        );
+      },
+    );
+
+    return Column(
+      children: [
+        const ResponsiveGap(
+          small: 32,
+          medium: 48,
+          large: 96,
+        ),
+        board,
+        const ResponsiveGap(
+          large: 96,
+        ),
+      ],
+    );
   }
 
   @override
@@ -171,7 +297,17 @@ class SimplePuzzleLayoutDelegate extends PuzzleLayoutDelegate {
 
   @override
   Widget whitespaceTileBuilder() {
-    return const SizedBox();
+    return Transform(
+      transform: Matrix4.identity()
+        ..setEntry(3, 2, 0.001)
+        ..translate(0, 0, 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: PuzzleColors.boardDark,
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
   }
 
   @override
@@ -272,6 +408,7 @@ class SimplePuzzleBoard extends StatelessWidget {
     required this.length,
     required this.boardSize,
     required this.tiles,
+    required this.state,
     this.spacing = 8,
   }) : super(key: key);
 
@@ -286,6 +423,9 @@ class SimplePuzzleBoard extends StatelessWidget {
 
   /// The spacing between each tile from [tiles].
   final double spacing;
+
+  /// The state of the puzzle.
+  final PuzzleState state;
 
   /// The size of each tile on the board in pixels.
   double get tileSize => (boardSize - (spacing * (length - 1))) / length;
@@ -302,14 +442,16 @@ class SimplePuzzleBoard extends StatelessWidget {
       return col * (spacing + tileSize);
     }
 
-    return Stack(
-      // fit: StackFit.expand,
+    final whitespaceIndex =
+        state.puzzle.tiles.indexOf(state.puzzle.getWhitespaceTile());
+
+    final board = Stack(
       children: [
         for (var position = 0; position < tiles.length; position++) ...{
           Positioned(
             left: getLeftOffset(position),
             top: getTopOffset(position),
-            child: Container(
+            child: Ink(
               width: tileSize,
               height: tileSize,
               decoration: BoxDecoration(
@@ -320,21 +462,66 @@ class SimplePuzzleBoard extends StatelessWidget {
           ),
         },
         for (var position = 0; position < tiles.length; position++) ...{
-          AnimatedPositioned(
-            key: tiles[position].key,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
+          Positioned(
             left: getLeftOffset(position),
             top: getTopOffset(position),
+            // child: tiles[whitespaceIndex],
             child: SizedBox(
               width: tileSize,
               height: tileSize,
-              child: tiles[position],
+              child: tiles[whitespaceIndex],
             ),
           ),
         },
+        // Positioned(
+        //   left: getLeftOffset(whitespaceIndex),
+        //   top: getTopOffset(whitespaceIndex),
+        //   child: SizedBox(
+        //     width: tileSize,
+        //     height: tileSize,
+        //   ),
+        // ),
+        for (var position = 0; position < tiles.length; position++) ...{
+          // if (state.lastTappedTile == state.puzzle.tiles[position]) ...{
+          //   Positioned(
+          //     left: getLeftOffset(position),
+          //     top: getTopOffset(position),
+          //     child: SizedBox(
+          //       width: tileSize,
+          //       height: tileSize,
+          //       child: Container(color: Colors.blue)
+          //     ),
+          //   ),
+          // },
+          if (state.puzzle.tiles[position].isWhitespace) ...{
+            // Positioned(
+            //   left: getLeftOffset(position),
+            //   top: getTopOffset(position),
+            //   child: SizedBox(
+            //     width: tileSize,
+            //     height: tileSize,
+            //     child: tiles[position],
+            //   ),
+            // ),
+          } else ...{
+            AnimatedPositioned(
+              key: tiles[position].key,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              left: getLeftOffset(position),
+              top: getTopOffset(position),
+              child: SizedBox(
+                width: tileSize,
+                height: tileSize,
+                child: tiles[position],
+              ),
+            ),
+          }
+        },
       ],
     );
+
+    return board;
   }
 }
 
@@ -453,8 +640,8 @@ class SimplePuzzleShuffleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PuzzleButton(
-      textColor: PuzzleColors.primary0,
-      backgroundColor: PuzzleColors.primary6,
+      textColor: PuzzleColors.primary000,
+      backgroundColor: PuzzleColors.primary400,
       onPressed: () => context.read<PuzzleBloc>().add(const PuzzleReset()),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

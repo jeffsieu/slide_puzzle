@@ -2,41 +2,44 @@ import 'package:flutter/widgets.dart';
 
 /// Defines the color palette for the puzzle UI.
 abstract class PuzzleColors {
+  /// Primary 0
+  static const Color primary000 = Color(0xFFFFFFFF);
+
   /// Primary 1
-  static const Color primary1 = Color(0xFF492E76);
+  static const Color primary100 = Color(0xFFDBD0EC);
 
   /// Primary 2
-  static const Color primary2 = Color(0xFF5C3993);
+  static const Color primary200 = Color(0xFFC3B0E0);
 
   /// Primary 3
-  static const Color primary3 = Color(0xFF784FBA);
+  static const Color primary300 = Color(0xFFAA90D4);
 
   /// Primary 4
-  static const Color primary4 = Color(0xFF835DC0);
+  static const Color primary400 = Color(0xFF9879CA);
 
   /// Primary 5
-  static const Color primary5 = Color(0xFF8661C1);
+  static const Color primary500 = Color(0xFF8661C1);
 
   /// Primary 6
-  static const Color primary6 = Color(0xFF9A7BCC);
+  static const Color primary600 = Color(0xFF7E59BB);
 
   /// Primary 7
-  static const Color primary7 = Color(0xFFA589D1);
+  static const Color primary700 = Color(0xFF734FB3);
 
   /// Primary 8
-  static const Color primary8 = Color(0xFFBCA7DD);
+  static const Color primary800 = Color(0xFF6945AB);
 
   /// Primary 9
-  static const Color primary9 = Color(0xFFD2C4E8);
-
-  /// Primary 0
-  static const Color primary0 = Color(0xFFFFFFFF);
+  static const Color primary900 = Color(0xFF56339E);
 
   /// Secondary 1
   static const Color secondary1 = Color(0xFF00C989);
 
   /// Board color
   static const Color board = Color(0xFFF3CEE0);
+
+  /// Board color - dark variation
+  static const Color boardDark = Color(0xFFEFBDD5);
 
   /// Black
   static const Color black = Color(0xFF000000);

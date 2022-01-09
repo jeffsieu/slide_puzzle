@@ -11,13 +11,13 @@ class PuzzleTitle extends StatelessWidget {
   const PuzzleTitle({
     Key? key,
     required this.title,
-    this.color = PuzzleColors.primary1,
+    this.color = PuzzleColors.primary900,
   }) : super(key: key);
 
   /// The title to be displayed.
   final String title;
 
-  /// The color of the [title], defaults to [PuzzleColors.primary1].
+  /// The color of the [title], defaults to [PuzzleColors.primary900].
   final Color? color;
 
   @override

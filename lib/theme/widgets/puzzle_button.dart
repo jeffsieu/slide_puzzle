@@ -31,7 +31,7 @@ class PuzzleButton extends StatelessWidget {
     return SizedBox(
       width: 145,
       height: 44,
-      child: TextButton(
+      child: ElevatedButton(
         style: TextButton.styleFrom(
           padding: EdgeInsets.zero,
           primary: textColor,
